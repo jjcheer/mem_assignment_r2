@@ -1,0 +1,367 @@
+---
+title: "Solution for MEM Assignment r2"
+author: "Wenbo CHEN"
+documentclass: ctexart
+output:
+  pdf_document:
+    latex_engine: xelatex
+    fig_width: 8
+  rticles::ctex:
+    fig_caption: no
+    number_sections: yes
+    toc: no
+  html_document:
+    toc: no
+    df_print: paged
+geometry: left=1.5cm,right=2cm,top=3cm,bottom=2.5cm
+keywords:
+- MEM
+- 作业
+- 参考答案
+CJKmainfont: Songti SC
+---
+
+```{r setup, include = FALSE,echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE,error = FALSE, warning = FALSE, message = FALSE,
+                      out.width = "100%", split = FALSE, fig.align = "center",dev="cairo_pdf",fig.pos='H')
+
+#load library
+library(tidyverse) # data manipulation
+library(kableExtra) # nice table
+library(broom)
+library(modelr)
+library(stats)
+library(lubridate)
+library(infer)
+library(kableExtra)
+library(scales)
+theme_set(theme(text = element_text(family="Helvetica",size = 10)))
+filepath ="/Users/jameschen/Documents/02_Teaching/12_quantitative_thinking_R/assignments/r2" # the data file path, replace the path with yours.
+options(scipen = 1, digits = 2)
+```
+
+# Question #1: BigBangTheory. (Attached Data: BigBangTheory)
+
+```{r}
+data_q1 <- read_csv(str_c(filepath,"/data/BigBangTheory.csv")) %>% rename(viewers = `Viewers (millions)`,                                                         air_date = `Air Date`) %>% mutate(air_date = mdy(air_date))# read data
+```
+
+a. The minimum is `r min(data_q1$viewers)`, the maximum number of viewers is `r max(data_q1$viewers)`
+b. Mean=`r mean(data_q1$viewers)`; median = `r median(data_q1$viewers)`;
+mode = `r names(which.max(table(data_q1$viewers)))`
+c. Q1 = `r quantile(data_q1$viewers,probs = 0.25)`;
+Q3 = `r quantile(data_q1$viewers,probs = 0.75)`
+d. From the plot below, we cannot find any trend between 2011-2012 season.
+
+```{r plot, fig.cap= "Plot between date and viewers"}
+ggplot(data_q1,aes(air_date,viewers)) +
+         geom_point() +
+         geom_line(color="red") +
+  scale_x_date(breaks = data_q1$air_date) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+# Question #2: NBAPlayerPts. (Attached Data: NBAPlayerPts)
+```{r}
+data_q2 <- read_csv(str_c(filepath,"/data/NBAPlayerPts.csv")) 
+a <- table(cut_width(data_q2$PPG,2,boundary = 10))/50
+cumsum(a)
+```
+
+a. The frequency distribution:  `r table(cut_width(data_q2$PPG,2,boundary = 10))`
+b. Relative frequency:  `r table(cut_width(data_q2$PPG,2,boundary = 10))/50`
+c. Cumulative percent frequency distribution: \\n
+`r cumsum(table(cut_width(data_q2$PPG,2,boundary = 10))/50)`
+d. The histogram is as follow:
+```{r}
+ggplot(data_q2,aes(PPG)) + 
+  geom_histogram(binwidth = 5,color = "black",fill="white") 
+```
+e. It seems skewed rightly, for it has a long tail to the right.
+f. 1-78% = 22%.
+
+# Question #3
+
+a. The sample size is `r ceiling(500^2/20^2)`.
+b. The sample size is large, so the distribution of x-bar is normal distribution. The probability that the point estimate was within ±25 of the population mean is: `r 1- 2*(1-pnorm(25/20))`.
+
+# Question #4
+
+```{r}
+data_q4 <- read_csv(str_c(filepath,"/data/Professional.csv")) %>% 
+  rename(age = Age,
+         gender = Gender,
+    real_estate = `Real Estate Purchases?`,
+    investments = `Value of Investments ($)`,
+    num_trans = `Number of Transactions`,
+    has_broadband = `Broadband Access?`,
+    income = `Household Income ($)`,
+    have_children = `Have Children?`) %>% 
+  select(age:have_children) %>% 
+  mutate(across(is.character, as.factor))
+
+# Descriptive statistics
+
+skimr::skim(data_q4) %>% 
+  kable() %>% 
+  kable_styling()
+```
+
+a. the descriptive statistics.
+
+b. 95% confidence intervals of the mean age and household income.
+```{r}
+t.test(data_q4$age)[[4]]
+t.test(data_q4$income)[[4]]
+```
+
+
+c. We can conclude with 95% confidence that the mean age of subscribers to Young Professional is between 29.72 and 30.50 years of age.  And, we can conclude with 95% confidence that the mean household income of subscribers is between \$71,079 and \$77,840.
+
+```{r}
+# 95% confidence interval of the proportion who have broadband and have children
+
+prop_test(data_q4,response = has_broadband,success = "Yes") # use the pkg "infer"
+prop_test(data_q4, response = have_children,success = "Yes")
+```
+
+d. Yes. Young Professional should be a good advertising outlet for online brokers.  We see that most of the subscribers have financial investments exclusive of their home (the mean amount is \$28,538) and some of them have a substantial amount of investments.  (Several have over $100,000 of investments).  Another factor to consider is the number of stock, bond, and mutual fund transactions.  The mean number is approximately 6 per year and several subscribers make significantly more transactions than that.  Finally a large proportion of subscribers have broadband access (the sample proportion is .6244) and this makes them more likely to do business with an online broker.
+
+e. Yes,The survey results allow us to estimate that the mean age of subscribers is 30.12 years and that 53.41% of subscribers have children.  Given the age of subscribers, it is reasonable to assume that their children are young.  Thus, we conclude that subscribers to Young Professional would be a good target market for companies selling educational software and computer games for young children.
+
+f. A variety of answers are possible here.  But, from the survey results, it seems clear that articles about investing would have appeal to many readers.  Articles about real estate and architecture would probably appeal to those subscribers planning to make a real estate purchase.  Technology related articles would probably appeal to readers as well as an occasional article on parenting and child care.
+
+
+# Question #5: Quality Associate, Inc. (Attached Data: Quality)
+
+```{r}
+data_q5 <- read_csv(str_c(filepath,"/data/Quality.csv")) %>% 
+  rename(s1 = `Sample 1`,
+         s2 = `Sample 2`,
+         s3 = `Sample 3`,
+         s4 = `Sample 4`)
+
+
+cal_p <- function(vec,miu,sigma,n){
+  a <- mean(vec) - miu
+  if(a >=0) {return(2*(1-pnorm(a/(sigma/sqrt(n)))))} 
+    else
+      return(2*pnorm(a/(sigma/sqrt(n))))
+}
+```
+
+a. the p_value is as follows:
+```{r}
+data_q5 %>% 
+  map_dbl(cal_p,miu = 12, sigma = 0.21, n = 30)
+```
+
+a. Also, you can use interval to test the hypothesis
+```{r}
+z_interval <- function(miu,sigma,prob,n) {return(c(miu + qnorm(prob) * sigma / sqrt(n), miu - qnorm(prob) * sigma / sqrt(n)))}
+z_interval(12,0.21,0.01,30)
+map(data_q5,mean)
+```
+
+b. s.d.
+```{r}
+map(data_q5,sd)
+```
+
+It's reasonable to assume the sd is 0.21.
+
+c.
+
+```{r}
+z_interval(12,0.21,0.01,30)
+```
+
+d. e.g., $s.g. = 0.05$
+
+```{r}
+z_interval(12,0.21,0.05,30)
+```
+
+with the increase of significant level, type I error will increase.
+
+
+# Question #6
+
+```{r}
+data_q6 <- read_csv(str_c(filepath,"/data/Occupancy.csv"), skip = 1) %>% rename(mar_2007 = `March 2007`, mar_2008 = `March 2008`) %>% mutate(across(is.character,as.factor))
+```
+
+a. point estimate
+
+```{r}
+sum(data_q6$mar_2007 %in% c("Yes"))/200
+sum(data_q6$mar_2008 %in% c("Yes"))/150
+```
+
+b. 95% confidence interval
+
+```{r}
+pa <- sum(data_q6$mar_2007 %in% c("Yes"))/200
+pb <- sum(data_q6$mar_2008 %in% c("Yes"))/150
+e <- qnorm(0.975) * sqrt(pa*(1-pa)/200 + pb*(1-pb)/150)
+```
+
+- The interval is `r c(pa-pb-e,pa-pb+e)`.
+
+c. Yes. The interval doesn't include Zero. Which means we should reject the equality hypothesis.
+
+
+# Question #7
+
+```{r}
+data_q7 <- read_csv(str_c(filepath,"/data/Training.csv")) 
+```
+
+a. 
+
+```{r}
+skimr::skim(data_q7) %>% 
+  kable() %>% 
+  kable_styling()
+```
+
+b.
+
+```{r}
+t.test(data_q7$Current,data_q7$Proposed)
+```
+
+- In 0.05 significant level, there is no difference between the two groups.
+
+c.
+
+```{r}
+map(data_q7,sd)
+map(data_q7,var)
+var.test(data_q7$Current,data_q7$Proposed)
+```
+
+- conclusion: the sd, or variance is different. The Current method has larger variance.
+
+d.Based on the data available, the proposed method is preferred. The two methods are very close in terms of mean completion times with the 95% confidence interval of the difference being -1.55 to 0.83 hours. However, the proposed method has a significantly lower variance. Under the proposed method, students are more likely to complete the training in approximately the same amount of time. There should be less chance of faster students waiting for slower students to complete the training.
+
+e. Before making a final decision, we recommend that data be collected on the amount of learning under the two methods. The time data favors switching to the proposed method. However, is the quality of the training with the proposed method the same or better than the quality of the training with the current method? Both groups could be given an examination at the end of the training program. Analysis of the examination scores would determine if the programs were similar or different in terms of the amount of learning provided by the programs. This analysis should be made prior to the final decision to switch to the proposed method.
+
+
+
+# Question #8
+
+```{r}
+data_q8 <- read_csv(str_c(filepath,"/data/Camry.csv")) %>% 
+  rename(miles = `Miles (1000s)`,
+         price = `Price ($1000s)`)
+```
+
+a. The plot is as follows:
+```{r}
+data_q8 %>% 
+  ggplot() +
+  geom_point(aes(miles,price))
+```
+
+b. There appears to be a negative relationship between the two variables that can be approximated by a straight line. An argument could also be made that the relationship is perhaps curvilinear because at some point a car has so many miles that its value becomes very small.
+
+c.
+```{r}
+lm_camry <- lm(price ~ miles, data = data_q8)
+
+summary(lm_camry)
+```
+- Regression Equation; 
+$$ Price = 16.470 - 0.059 * miles $$
+d. Significant relationship: $p-value = 0.000348 < α = .05$
+
+e. $R^2=.5387$; A reasonably good fit considering that the condition of the car is also an important factor in what the price is.
+
+f. The slope of the estimated regression equation is -.059. Thus, a one-unit increase in the value of x coincides with a decrease in the value of y equal to .059. Because the data were recorded in thousands, every additional 1000 miles on the car’s odometer will result in a $59.0 decrease in the predicted price.
+
+g. The predicted price for a 2007 Camry with 60,000 miles is  $= 16.47 -.0588(60) = 12.942$ or  $\$12,942$. Because of other factors, such as condition and whether the seller is a private party or a dealer, this is probably not the price you would offer for the car. But, it should be a good starting point in figuring out what to offer the seller.
+
+# Question #9
+
+a. Visual exploration on the comparison between churn=0 and churn = 1.
+
+```{r}
+
+we_data <- readxl::read_xlsx(str_c(filepath,"/data/WE.xlsx")) %>% 
+  set_names("id","churn","happy_index","chg_hi","support","chg_supprt",
+            "priority","chg_priority","log_in_fre","chg_blog_fre","chg_vis","y_age","chg_interval")
+
+glimpse(we_data)
+
+we_data %>% 
+  select(-id) %>% 
+  group_by(churn) %>% 
+  group_modify(~{
+    .x %>% 
+      purrr::map_dfc(mean, na.rm = TRUE)
+  }) %>% ungroup() %>% 
+  kable() %>% 
+  kable_styling()
+```
+
+We find:
+
+- There are differences among all the 11 indicators between those churn and not churn.
+
+- But whether these differences are significant, we need  to test.
+
+b. using `t.test` to check whether the differences are significant.
+
+```{r}
+we_data %>% 
+  select(-id) %>% 
+  pivot_longer(cols = -churn, names_to = "variable", values_to = "value") %>% 
+  group_nest(variable) %>% 
+  mutate(t.test = map(data, ~ tidy(t.test(value ~ churn, data = .x)))) %>% 
+  unnest(t.test) %>% 
+  select(-data) %>% 
+  kable() %>% kable_styling()
+```
+
+From the table, we can get conclusion that:
+
+- Except `chg-priority` and `chg_supprt`, all the other differences are significant.
+
+c. d. Using logit regression to estimate the regression function, and then use the regression function to predict.
+
+```{r}
+
+set.seed(1234)
+we_logit<-glm(churn ~ chg_blog_fre + chg_hi + chg_interval + chg_vis + happy_index
+              + log_in_fre + priority  + support + y_age,
+             data = we_data,
+             family = binomial(link = "logit"))
+summary(we_logit)
+
+library(car)
+vif(we_logit)
+```
+
+Predict the churn probability.
+
+```{r}
+we_data %>% 
+  add_predictions(we_logit,type = "response") %>% 
+  arrange(desc(pred)) %>% 
+  filter(churn == 0) %>% 
+  slice_head(n=30) %>% 
+  kable() %>% kable_styling()
+```
+
+Here, we provide the table on the 30 most likely churn customers. Customer retention should be taken to these customers.
+
+
+
+
+
+
+
+
+
+
